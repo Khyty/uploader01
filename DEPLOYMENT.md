@@ -5,8 +5,8 @@
 - Vercel project: `pannheu-uploader01`
 - Supabase project: `pannheu-uploader01` (`sdsasujntwgidfcmwmgm`), Singapore
 - Supabase project dashboard: https://supabase.com/dashboard/project/sdsasujntwgidfcmwmgm
-- Deployment: `dpl_2iRvBN49BbvtgGrk2zeuXnRQcRYd`
-- Application source revision: `14662c0`
+- Deployment: `dpl_7nt8qK3XbkLdtxEqTHk7qqy9U2wK`
+- Application source revision: `02b5ef9`
 
 Both SQL migrations are applied. The private uploads bucket has a 20 MB per-file limit; the database enforces the 800 MB shared quota. Guest management is enabled without registration. The `file-manager` Edge Function is deployed with explicit private browser-capability checks. The hourly `pannheu-hourly-cleanup` Cron job is active; its authorization secret is stored in Supabase Edge Function secrets and Vault. Supabase Auth and email are not required. Vercel deployment protection is disabled for this public application.
 
@@ -21,3 +21,7 @@ The app uses Supabase Free; bandwidth, abuse controls, and current provider allo
 ## Interface refresh
 
 The modern mobile-first interface is live on both domains. New links use `/s/TOKEN`; legacy query links still resolve. Local Chromium checks passed for responsive layout, navigation, keyboard-accessible dialogs, search, and offline fallback. A separate production-build integration test with mocked Supabase HTTP responses passed guest upload/completion, clipboard copying, browser-key persistence, deletion confirmation, new and legacy links, and expired-link rendering. Public HTTP checks confirmed the updated application on both domains and share routes, with no preview mode or Vercel login protection. The Supabase backend and retention settings were unchanged in this release.
+
+## Direct downloads
+
+Download buttons are available on file cards, upload success dialogs, and shared download dialogs. Browser integration tests verified download events, original filenames, exact file bytes, failed-transfer retry, and keeping the current page open. Supabase signed URL authorization and expiration remain unchanged.
