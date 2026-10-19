@@ -96,7 +96,7 @@ export default function Home() {
     [copied, setCopied] = useState(false),
     [pendingDelete, setPendingDelete] = useState<Item | null>(null),
     [deleting, setDeleting] = useState(false),
-    [downloading, setDownloading] = useState(false),
+    [downloading, setDownloading] = useState<string | null>(null),
     [shareState, setShareState] = useState<"loading" | "missing" | null>(null);
   const input = useRef<HTMLInputElement>(null),
     xhr = useRef<XMLHttpRequest | null>(null);
@@ -263,13 +263,62 @@ export default function Home() {
     }
   }
   async function getDownload(item: Item) {
-    setDownloading(true);
-    const { data, error } = await supabase!.functions.invoke("file-manager", {
-      body: { action: "download", token: item.share_token },
-    });
-    if (error || data?.error) notify(data?.error || error?.message, true);
-    else location.assign(data.url);
-    setDownloading(false);
+    if (downloading) return;
+    if (!supabase || !item.share_token) {
+      notify(
+        t(
+          "ឯកសារឧទាហរណ៍ មិនអាចទាញយកបានទេ។",
+          "Sample files cannot be downloaded. Upload a file first.",
+        ),
+        true,
+      );
+      return;
+    }
+    setDownloading(item.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("file-manager", {
+        body: { action: "download", token: item.share_token },
+      });
+      if (error || data?.error || !data?.url)
+        throw new Error(
+          data?.error || error?.message || "This file is no longer available.",
+        );
+      // Download bytes rather than navigating away to a storage URL. This also
+      // lets us report expired links and failed transfers inside the app.
+      const response = await fetch(data.url, { cache: "no-store" });
+      if (!response.ok)
+        throw new Error(
+          t(
+            "ទាញយកមិនបានទេ។ សូមសាកល្បងម្តងទៀត។",
+            "Download failed. Please try again.",
+          ),
+        );
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = item.name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      // Give mobile browsers time to consume the object URL.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      notify(
+        t(
+          "បានចាប់ផ្ដើមទាញយក។ សូមពិនិត្យថតទាញយករបស់អ្នក។",
+          "Download started. Check your downloads.",
+        ),
+      );
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : t("ទាញយកមិនបានទេ។", "Could not download the file."),
+        true,
+      );
+    } finally {
+      setDownloading(null);
+    }
   }
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(query.toLowerCase()),
@@ -653,6 +702,19 @@ export default function Home() {
                   </span>
                   <div className="file-actions">
                     <button
+                      className="icon-button download-button"
+                      onClick={() => getDownload(item)}
+                      disabled={Boolean(downloading)}
+                      aria-label={`Download ${item.name}`}
+                      title={t("ទាញយកឯកសារ", "Download file")}
+                    >
+                      {downloading === item.id ? (
+                        <Loader2 size={18} className="spin" />
+                      ) : (
+                        <Download size={18} />
+                      )}
+                    </button>
+                    <button
                       className="copy-button"
                       onClick={() => copy(item)}
                       aria-label={`Copy link for ${item.name}`}
@@ -970,11 +1032,23 @@ export default function Home() {
                         ? t("បានចម្លង!", "Link copied!")
                         : t("ចម្លងតំណភ្ជាប់", "Copy sharing link")}
                     </button>
+                    <button
+                      className="secondary full-width"
+                      disabled={Boolean(downloading)}
+                      onClick={() => getDownload(share)}
+                    >
+                      {downloading === share.id ? (
+                        <Loader2 className="spin" size={18} />
+                      ) : (
+                        <Download size={18} />
+                      )}
+                      {t("ទាញយកឯកសារ", "Download file")}
+                    </button>
                   </>
                 ) : (
                   <button
                     className="primary full-width"
-                    disabled={downloading}
+                    disabled={Boolean(downloading)}
                     onClick={() => getDownload(download!)}
                   >
                     {downloading ? (

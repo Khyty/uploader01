@@ -49,6 +49,7 @@ let browser, debugPage;
     key,
     uploaded = false,
     deleted = false;
+  let failTransfer = false;
   const item = {
     id: "test-id",
     name: "hello.txt",
@@ -69,6 +70,13 @@ let browser, debugPage;
     };
     if (request.method() === "OPTIONS")
       return route.fulfill({ status: 200, headers, body: "{}" });
+    if (url.pathname === "/test-download") {
+      return route.fulfill({
+        status: failTransfer ? 503 : 200,
+        headers: { ...headers, "Content-Type": "application/octet-stream" },
+        body: failTransfer ? "unavailable" : "hello",
+      });
+    }
     if (url.pathname === "/test-upload") {
       assert.equal(request.method(), "PUT");
       assert.equal(request.postData(), "hello");
@@ -112,7 +120,7 @@ let browser, debugPage;
         response = { ok: true };
         break;
       case "download":
-        response = { url: `http://127.0.0.1:${port}/offline.html` };
+        response = { url: "https://pannheu-test.supabase.co/test-download" };
         break;
       default:
         throw Error(`Unexpected backend action: ${body.action}`);
@@ -149,6 +157,34 @@ let browser, debugPage;
   await page.getByRole("heading", { name: "hello.txt", exact: true }).waitFor();
   await page.reload();
   await page.getByRole("heading", { name: "hello.txt", exact: true }).waitFor();
+  const before = page.url();
+  failTransfer = true;
+  await page
+    .getByRole("button", { name: "Download hello.txt", exact: true })
+    .click();
+  await page.getByRole("alert").waitFor();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Download hello.txt", exact: true })
+      .isEnabled(),
+    true,
+  );
+  failTransfer = false;
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download hello.txt", exact: true })
+    .click();
+  const saved = await downloadEvent;
+  assert.equal(saved.suggestedFilename(), "hello.txt");
+  assert.equal(
+    require("node:fs").readFileSync(await saved.path(), "utf8"),
+    "hello",
+  );
+  assert.equal(
+    page.url(),
+    before,
+    "Download must not navigate away from the app",
+  );
   await page
     .getByRole("button", { name: "Delete hello.txt", exact: true })
     .click();
@@ -165,6 +201,15 @@ let browser, debugPage;
   await page.getByRole("dialog").waitFor();
   await page.getByRole("button", { name: "Close", exact: true }).waitFor();
   assert.equal(await page.locator("input[type=email]").count(), 0);
+  const sharedDownload = page.waitForEvent("download");
+  await page.getByRole("dialog").getByRole("button").last().click();
+  const received = await sharedDownload;
+  assert.equal(received.suggestedFilename(), "hello.txt");
+  assert.equal(
+    require("node:fs").readFileSync(await received.path(), "utf8"),
+    "hello",
+  );
+
   await page.goto(`http://127.0.0.1:${port}/?share=${token}`);
   await page.locator(".shared-file").waitFor();
   await page.goto(`http://127.0.0.1:${port}/s/${"b".repeat(48)}`);
@@ -172,7 +217,7 @@ let browser, debugPage;
   await page.getByRole("heading", { name: "ឯកសារនេះលែងមានទៀតហើយ" }).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: guest upload through mocked HTTP storage, completion, copy clean URL, browser key persistence, delete cancel/confirm, new and legacy sharing routes, expired state, no login, no runtime errors.",
+    "PASS: guest upload through mocked HTTP storage, completion, copy clean URL, browser key persistence, direct downloads with original filename and byte verification, failed transfer retry, delete cancel/confirm, new and legacy sharing routes, expired state, no login, no runtime errors.",
   );
 })()
   .catch(async (e) => {
@@ -184,8 +229,17 @@ let browser, debugPage;
   .finally(async () => {
     await browser?.close();
     server.kill("SIGTERM");
-    const fs=require('node:fs');
-    const config=JSON.parse(fs.readFileSync('tsconfig.json','utf8'));
-    config.include=config.include.filter(path=>!path.includes('.next-guest-test'));
-    fs.writeFileSync('tsconfig.json',JSON.stringify(config,null,2)+'\n');
+    const generated = require("node:fs");
+    generated.writeFileSync(
+      "next-env.d.ts",
+      generated
+        .readFileSync("next-env.d.ts", "utf8")
+        .replaceAll(".next-guest-test/", ".next/"),
+    );
+    const fs = require("node:fs");
+    const config = JSON.parse(fs.readFileSync("tsconfig.json", "utf8"));
+    config.include = config.include.filter(
+      (path) => !path.includes(".next-guest-test"),
+    );
+    fs.writeFileSync("tsconfig.json", JSON.stringify(config, null, 2) + "\n");
   });

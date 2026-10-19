@@ -574,7 +574,7 @@ button:active {
 }
 .file-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 125px 165px;
+  grid-template-columns: minmax(0, 1fr) 125px 211px;
   align-items: center;
   gap: 24px;
   padding: 18px 21px;
@@ -1080,7 +1080,7 @@ button:active {
   }
   .file-row {
     gap: 12px;
-    grid-template-columns: minmax(0, 1fr) 100px 150px;
+    grid-template-columns: minmax(0, 1fr) 100px 196px;
   }
   .hero-caption {
     font-size: 10px;
@@ -1488,5 +1488,17 @@ button:active {
   * {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+.download-button {
+  color: #4e713d;
+  background: #edf3e4;
+  border: 1px solid #dce6cf;
+}
+@media (max-width: 720px) {
+  .download-button {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
