@@ -1,6 +1,6 @@
 # បញ្ញើ · Pannheu
 
-Mobile-first Khmer file sharing with Next.js, Supabase, and Vercel. Hanuman is the default font; the language button switches the principal interface headings to English. Supporting interface text is currently English.
+Mobile-first Khmer file sharing with Next.js, Supabase, and Vercel. Hanuman is the default font; the language button switches the interface between Khmer and English. Technical backend errors may be returned in English.
 
 ## Run locally
 
@@ -70,3 +70,9 @@ With the app running in preview mode (no Supabase variables), run `npm test`. It
 7. Check mobile layout, installability over HTTPS, and the offline notice. Browser PWA installation support varies; SVG and PNG application icons are included.
 
 The checked-in application can build without credentials. Real upload, cron execution, and download require the configured Supabase project and must be verified there.
+
+## Sharing links and interface
+
+The redesigned interface focuses on Send a file and My files, with touch-sized controls, upload progress, delete confirmation, keyboard-accessible dialogs, and loading/expired download states. New sharing links use `/s/TOKEN`; legacy `/?share=TOKEN` links remain supported. Both routes retain the full unpredictable token.
+
+Run `npm run test:guest` for a browser integration test with a mocked Supabase HTTP backend. It builds a separate test app in `.next-guest-test` and starts a production server on port 3012 and verifies the guest upload/complete flow, persistent management keys, clean and legacy links, copy feedback, and delete confirmation. This is separate from live Supabase verification.
