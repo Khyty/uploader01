@@ -43,19 +43,27 @@ Deno.serve(async req=>{
    const {data,error}=await admin.storage.from('uploads').createSignedUrl(file.path,60,{download:file.name});if(error)throw error;
    return reply({url:data.signedUrl});
   }
-  const {data:{user},error:authError}=await admin.auth.getUser(token);if(authError||!user)return reply({error:'Sign in to continue.'},401);
+  if(typeof body.guest_key!=='string'||!/^[a-f0-9]{64}$/.test(body.guest_key))return reply({error:'A private browser key is required.'},401);
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(body.guest_key));
+  const ownerKey=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');
+  const publicFields='id,name,size,created_at,expires_at,share_token,status';
+  if(body.action==='list'){
+   const {data,error}=await admin.from('files').select(publicFields).eq('owner_key',ownerKey).eq('status','ready').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false});if(error)throw error;
+   const {data:usage,error:usageError}=await admin.rpc('storage_usage');if(usageError)throw usageError;
+   return reply({files:data,usage});
+  }
   if(body.action==='reserve'){
    if(typeof body.name!=='string'||!body.name.trim()||body.name.length>255||!Number.isSafeInteger(body.size)||body.size<1||body.size>20000000)return reply({error:'Invalid file. Maximum size is 20 MB.'},400);
-   const {count,error:rateError}=await admin.from('files').select('id',{count:'exact',head:true}).eq('owner_id',user.id).gt('created_at',new Date(Date.now()-3600000).toISOString());
+   const {count,error:rateError}=await admin.from('files').select('id',{count:'exact',head:true}).eq('owner_key',ownerKey).gt('created_at',new Date(Date.now()-3600000).toISOString());
    if(rateError)throw rateError;
    if((count||0)>=10)return reply({error:'Upload limit reached. Try again later.'},429);
    await cleanup(20000000);
-   const {data:file,error}=await admin.rpc('reserve_upload',{p_owner:user.id,p_name:body.name,p_size:body.size});if(error)throw error;
+   const {data:file,error}=await admin.rpc('reserve_guest_upload',{p_owner:ownerKey,p_name:body.name,p_size:body.size});if(error)throw error;
    const {data:upload,error:urlError}=await admin.storage.from('uploads').createSignedUploadUrl(file.path);if(urlError)throw urlError;
    return reply({id:file.id,upload_url:upload.signedUrl});
   }
   if(body.action==='delete'||body.action==='complete'){
-   const {data:file}=await admin.from('files').select('*').eq('id',body.id).eq('owner_id',user.id).maybeSingle();if(!file)return reply({error:'File not found.'},404);
+   const {data:file}=await admin.from('files').select('*').eq('id',body.id).eq('owner_key',ownerKey).maybeSingle();if(!file)return reply({error:'File not found.'},404);
    if(body.action==='delete'){
     // Pending signed URLs cannot be revoked: retain quota until they expire.
     if(file.status==='pending'){return reply({ok:true,pending_cleanup:true})}
@@ -64,7 +72,7 @@ Deno.serve(async req=>{
    if(file.status!=='pending')return reply({error:'Upload is no longer pending.'},409);
    const parts=file.path.split('/');const {data:objects,error}=await admin.storage.from('uploads').list(parts[0],{search:parts[1]});if(error)throw error;
    const object=objects?.find(o=>o.name===parts[1]);if(!object||Number(object.metadata?.size)!==Number(file.expected_size))return reply({error:'Uploaded size did not match the reservation.'},400);
-   const {data:ready,error:update}=await admin.from('files').update({status:'ready',size:file.expected_size}).eq('id',file.id).eq('status','pending').select().single();if(update)throw update;
+   const {data:ready,error:update}=await admin.from('files').update({status:'ready',size:file.expected_size}).eq('id',file.id).eq('status','pending').select(publicFields).single();if(update)throw update;
    return reply({file:ready});
   }
   return reply({error:'Unknown action'},400);
