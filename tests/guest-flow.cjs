@@ -94,15 +94,20 @@ let browser, debugPage;
     const body = request.postDataJSON();
     if (body.action !== "download") {
       assert.match(body.guest_key, /^[a-f0-9]{64}$/);
-      if (key) assert.equal(key, body.guest_key);
-      key = body.guest_key;
     }
     let response;
     switch (body.action) {
       case "list":
-        response = { files, usage: files.length ? 20000000 : 0 };
+        response = {
+          files: files.map((file) => ({
+            ...file,
+            owned: body.guest_key === key,
+          })),
+          usage: files.length ? 20000000 : 0,
+        };
         break;
       case "reserve":
+        key = body.guest_key;
         assert.equal(body.size, 5);
         response = {
           id: "test-id",
@@ -110,11 +115,18 @@ let browser, debugPage;
         };
         break;
       case "complete":
+        assert.equal(body.guest_key, key);
         assert.ok(uploaded);
         files = [item];
         response = { file: item };
         break;
       case "delete":
+        if (body.guest_key !== key)
+          return route.fulfill({
+            status: 404,
+            headers,
+            body: JSON.stringify({ error: "File not found." }),
+          });
         deleted = true;
         files = [];
         response = { ok: true };
@@ -157,6 +169,25 @@ let browser, debugPage;
   await page.getByRole("heading", { name: "hello.txt", exact: true }).waitFor();
   await page.reload();
   await page.getByRole("heading", { name: "hello.txt", exact: true }).waitFor();
+  const ownerBrowserKey = await page.evaluate(() =>
+    localStorage.getItem("pannheu-guest-key"),
+  );
+  await page.evaluate(() =>
+    localStorage.setItem("pannheu-guest-key", "b".repeat(64)),
+  );
+  await page.reload();
+  await page.getByRole("heading", { name: "hello.txt", exact: true }).waitFor();
+  assert.equal(
+    await page.getByRole("button", { name: "Delete hello.txt" }).count(),
+    0,
+    "Public visitors must not see another uploader's delete action",
+  );
+  await page.evaluate(
+    (value) => localStorage.setItem("pannheu-guest-key", value),
+    ownerBrowserKey,
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "Delete hello.txt" }).waitFor();
   const before = page.url();
   failTransfer = true;
   await page
@@ -217,7 +248,7 @@ let browser, debugPage;
   await page.getByRole("heading", { name: "ឯកសារនេះលែងមានទៀតហើយ" }).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: guest upload through mocked HTTP storage, completion, copy clean URL, browser key persistence, direct downloads with original filename and byte verification, failed transfer retry, delete cancel/confirm, new and legacy sharing routes, expired state, no login, no runtime errors.",
+    "PASS: guest upload, public cross-browser listing with uploader-only deletion, copy clean URL, direct downloads with original filename and byte verification, failed transfer retry, delete cancel/confirm, new and legacy sharing routes, expired state, no login, no runtime errors.",
   );
 })()
   .catch(async (e) => {

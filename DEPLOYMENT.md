@@ -8,11 +8,11 @@
 - Deployment: `dpl_7nt8qK3XbkLdtxEqTHk7qqy9U2wK`
 - Application source revision: `02b5ef9`
 
-Both SQL migrations are applied. The private uploads bucket has a 20 MB per-file limit; the database enforces the 800 MB shared quota. Guest management is enabled without registration. The `file-manager` Edge Function is deployed with explicit private browser-capability checks. The hourly `pannheu-hourly-cleanup` Cron job is active; its authorization secret is stored in Supabase Edge Function secrets and Vault. Supabase Auth and email are not required. Vercel deployment protection is disabled for this public application.
+Both SQL migrations are applied. The private uploads bucket has a 20 MB per-file limit; the database enforces the 800 MB shared quota. Completed, unexpired uploads appear in a public gallery, while deletion remains restricted to the browser that uploaded each file. Guest management is enabled without registration. The `file-manager` Edge Function is deployed with explicit private browser-capability checks. The hourly `pannheu-hourly-cleanup` Cron job is active; its authorization secret is stored in Supabase Edge Function secrets and Vault. Supabase Auth and email are not required. Vercel deployment protection is disabled for this public application.
 
 Production environment variables are configured in Vercel. Service-role and cleanup secrets are not included in the frontend or this repository.
 
-Verified against the live backend: guest upload, actual stored size, byte-for-byte shared download, isolation of file lists and delete access between browser keys, link revocation, rejection of unauthorized cleanup, and permanent cleanup of the test object. The public production page returned HTTP 200 with the application. The test file was removed. Full interactive production browser validation was limited by the cloud machine's egress policy; the interface previously passed local Chromium smoke tests.
+Verified against the live backend: guest upload, actual stored size, byte-for-byte shared download, public listing with delete access isolated by browser key, link revocation, rejection of unauthorized cleanup, and permanent cleanup of the test object. The public production page returned HTTP 200 with the application. The test file was removed. Full interactive production browser validation was limited by the cloud machine's egress policy; the interface previously passed local Chromium smoke tests.
 
 This deployment was uploaded through the Vercel API. GitHub auto-deployment is not configured. Subsequent source changes require another deployment or connecting the GitHub repository in Vercel settings.
 

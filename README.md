@@ -19,8 +19,8 @@ Without Supabase configuration the app displays a labeled design preview with sa
 
 1. Create a Supabase Free project. Check its current storage, egress, function and database limits. The application cap is 800,000,000 bytes across all visitors; this does not cap bandwidth or ensure unlimited free downloads.
 2. Apply both files in `supabase/migrations/` in filename order using the Supabase SQL editor, or link the project with the Supabase CLI and run `supabase db push`.
-3. Deploy the function: `supabase functions deploy file-manager`. Its JWT gateway check is disabled in `supabase/config.toml` to support public download links; upload/list/delete requests validate a private browser capability inside the function. Only its SHA-256 hash is stored in Postgres. The service-role key stays in the Edge Function, never in Next.js public variables.
-4. No Supabase Auth setup is needed. Visitors do not register or log in. A cryptographically random private key in localStorage controls their file list and deletion; it is never included in sharing links. Clearing browser data or changing browsers loses management access. Existing account-owned uploads remain stored but are not assigned to new guests.
+3. Deploy the function: `supabase functions deploy file-manager`. Its JWT gateway check is disabled in `supabase/config.toml` to support public browsing and download links. The list endpoint returns up to 100 completed, unexpired uploads to every visitor. Upload and delete requests validate a private browser capability inside the function. Only its SHA-256 hash is stored in Postgres. The service-role key stays in the Edge Function, never in Next.js public variables.
+4. No Supabase Auth setup is needed. Visitors do not register or log in. All completed uploads are public. A cryptographically random private key in localStorage controls deletion; it is never included in sharing links. Clearing browser data or changing browsers loses deletion access. Existing account-owned uploads remain stored but are not assigned to new guests.
 5. Generate a strong cleanup secret and set it securely with `supabase secrets set CLEANUP_SECRET=...`. Never use the service-role key as this secret. Configure the hourly job below.
 6. In the Supabase dashboard, enable the Cron, pg_net, and Vault extensions. Save the function URL as a Vault secret named `pannheu_cleanup_url`, and the same cleanup secret as `pannheu_cleanup_secret`. Create the job using this SQL:
 
@@ -63,7 +63,7 @@ With the app running in preview mode (no Supabase variables), run `npm test`. It
 
 1. Without signing in, upload a small file, and verify its displayed size and quota.
 2. Open its sharing link in a separate browser and download; compare the bytes.
-3. Confirm a different browser key cannot list, complete, or delete another browser’s uploads, and that public share tokens cannot perform management operations.
+3. Confirm a different browser can list and download an upload but cannot complete or delete another browser’s uploads, and that public share tokens cannot perform management operations.
 4. Delete a file and verify both the object and public link are gone.
 5. In a test project, expire a file, invoke cleanup with the cleanup secret, and verify removal.
 6. Exercise concurrent reservations near 800 MB and verify rejected uploads do not exceed quota. Test abandoned upload cleanup after signed URLs have expired.
@@ -73,7 +73,7 @@ The checked-in application can build without credentials. Real upload, cron exec
 
 ## Sharing links and interface
 
-The redesigned interface focuses on Send a file and My files, with touch-sized controls, upload progress, delete confirmation, keyboard-accessible dialogs, and loading/expired download states. New sharing links use `/s/TOKEN`; legacy `/?share=TOKEN` links remain supported. Both routes retain the full unpredictable token.
+The redesigned interface focuses on Send a file and Public files, with touch-sized controls, upload progress, deletion restricted to the uploader, keyboard-accessible dialogs, and loading/expired download states. New sharing links use `/s/TOKEN`; legacy `/?share=TOKEN` links remain supported. Both routes retain the full unpredictable token.
 
 Run `npm run test:guest` for a browser integration test with a mocked Supabase HTTP backend. It builds a separate test app in `.next-guest-test` and starts a production server on port 3012 and verifies the guest upload/complete flow, persistent management keys, clean and legacy links, copy feedback, and delete confirmation. This is separate from live Supabase verification.
 

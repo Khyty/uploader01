@@ -48,9 +48,10 @@ Deno.serve(async req=>{
   const ownerKey=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');
   const publicFields='id,name,size,created_at,expires_at,share_token,status';
   if(body.action==='list'){
-   const {data,error}=await admin.from('files').select(publicFields).eq('owner_key',ownerKey).eq('status','ready').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false});if(error)throw error;
+   const {data,error}=await admin.from('files').select(`${publicFields},owner_key`).eq('status','ready').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(100);if(error)throw error;
    const {data:usage,error:usageError}=await admin.rpc('storage_usage');if(usageError)throw usageError;
-   return reply({files:data,usage});
+   const files=(data||[]).map(({owner_key,...file})=>({...file,owned:owner_key===ownerKey}));
+   return reply({files,usage});
   }
   if(body.action==='reserve'){
    if(typeof body.name!=='string'||!body.name.trim()||body.name.length>255||!Number.isSafeInteger(body.size)||body.size<1||body.size>20000000)return reply({error:'Invalid file. Maximum size is 20 MB.'},400);
@@ -73,7 +74,7 @@ Deno.serve(async req=>{
    const parts=file.path.split('/');const {data:objects,error}=await admin.storage.from('uploads').list(parts[0],{search:parts[1]});if(error)throw error;
    const object=objects?.find(o=>o.name===parts[1]);if(!object||Number(object.metadata?.size)!==Number(file.expected_size))return reply({error:'Uploaded size did not match the reservation.'},400);
    const {data:ready,error:update}=await admin.from('files').update({status:'ready',size:file.expected_size}).eq('id',file.id).eq('status','pending').select(publicFields).single();if(update)throw update;
-   return reply({file:ready});
+   return reply({file:{...ready,owned:true}});
   }
   return reply({error:'Unknown action'},400);
  }catch(e){console.error(e);return reply({error:e instanceof Error?e.message:'The request could not be completed.'},400)}

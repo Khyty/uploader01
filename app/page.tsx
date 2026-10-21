@@ -47,6 +47,7 @@ type Item = {
   expires_at: string;
   share_token: string;
   status: string;
+  owned?: boolean;
 };
 const samples: Item[] = [
   {
@@ -411,7 +412,7 @@ export default function Home() {
               className={tab === "files" ? "active" : ""}
               onClick={() => setTab("files")}
             >
-              {t("ឯកសាររបស់ខ្ញុំ", "My files")}
+              {t("ឯកសារសាធារណៈ", "Public files")}
               <span>{items.length}</span>
             </button>
           </nav>
@@ -633,13 +634,13 @@ export default function Home() {
                 {t("កន្លែងផ្ទាល់ខ្លួនរបស់អ្នក", "YOUR LITTLE CORNER")}
               </div>
               <h2 id="files-title">
-                {t("ឯកសាររបស់ខ្ញុំ", "Your recent files")}{" "}
+                {t("ឯកសារសាធារណៈ", "Public files")}{" "}
                 <span className="count-badge">{items.length}</span>
               </h2>
               <p>
                 {t(
-                  "ឯកសារដែលបានផ្ញើពីកម្មវិធីរុករកនេះ។",
-                  "Sent from this browser. Ready to share again.",
+                  "ឯកសារថ្មីៗដែលអ្នករាល់គ្នាអាចមើល និងទាញយកបាន។",
+                  "Recent uploads everyone can see and download.",
                 )}
               </p>
             </div>
@@ -722,17 +723,19 @@ export default function Home() {
                       <Link2 size={17} />
                       <span>{t("ចម្លងតំណ", "Copy link")}</span>
                     </button>
-                    <button
-                      className="icon-button delete-button"
-                      onClick={() =>
-                        item.status === "demo"
-                          ? remove(item)
-                          : setPendingDelete(item)
-                      }
-                      aria-label={`Delete ${item.name}`}
-                    >
-                      <Trash2 size={17} />
-                    </button>
+                    {(item.owned || item.status === "demo") && (
+                      <button
+                        className="icon-button delete-button"
+                        onClick={() =>
+                          item.status === "demo"
+                            ? remove(item)
+                            : setPendingDelete(item)
+                        }
+                        aria-label={`Delete ${item.name}`}
+                      >
+                        <Trash2 size={17} />
+                      </button>
+                    )}
                   </div>
                 </article>
               ))
@@ -769,8 +772,8 @@ export default function Home() {
           <div className="files-note">
             <ShieldCheck size={15} />
             {t(
-              "រក្សាកម្មវិធីរុករកនេះ ដើម្បីគ្រប់គ្រងឯកសាររបស់អ្នក។",
-              "Your file list stays with this browser.",
+              "ឯកសារទាំងអស់ជាសាធារណៈ។ មានតែអ្នកផ្ទុកឡើងប៉ុណ្ណោះដែលអាចលុបបាន។",
+              "All uploads are public. Only the uploader can delete their files.",
             )}
             <button onClick={() => setGuestInfo(true)}>
               {t("ស្វែងយល់បន្ថែម", "Learn more")}
@@ -840,7 +843,7 @@ export default function Home() {
           onClick={() => setTab("files")}
         >
           <FolderOpen size={21} />
-          {t("ឯកសារខ្ញុំ", "My files")}
+          {t("ឯកសារសាធារណៈ", "Public files")}
         </button>
         <button onClick={() => setGuestInfo(true)}>
           <HelpCircle size={21} />
