@@ -5,8 +5,8 @@
 - Vercel project: `pannheu-uploader01`
 - Supabase project: `pannheu-uploader01` (`sdsasujntwgidfcmwmgm`), Singapore
 - Supabase project dashboard: https://supabase.com/dashboard/project/sdsasujntwgidfcmwmgm
-- Deployment: `dpl_7nt8qK3XbkLdtxEqTHk7qqy9U2wK`
-- Application source revision: `02b5ef9`
+- Deployment: `dpl_GWQEPmYBSxjZC92Y5Ms756kn8Jxk`
+- Application source revision: `af0dd16`
 
 Both SQL migrations are applied. The private uploads bucket has a 20 MB per-file limit; the database enforces the 800 MB shared quota. Completed, unexpired uploads appear in a public gallery, while deletion remains restricted to the browser that uploaded each file. Guest management is enabled without registration. The `file-manager` Edge Function is deployed with explicit private browser-capability checks. The hourly `pannheu-hourly-cleanup` Cron job is active; its authorization secret is stored in Supabase Edge Function secrets and Vault. Supabase Auth and email are not required. Vercel deployment protection is disabled for this public application.
 
@@ -17,6 +17,10 @@ Verified against the live backend: guest upload, actual stored size, byte-for-by
 This deployment was uploaded through the Vercel API. GitHub auto-deployment is not configured. Subsequent source changes require another deployment or connecting the GitHub repository in Vercel settings.
 
 The app uses Supabase Free; bandwidth, abuse controls, and current provider allowances still need monitoring. The 800 MB storage quota does not cap download traffic. See README.md for retention behavior, reservation accounting, and public-launch limitations.
+
+## Public gallery
+
+Completed, unexpired uploads are visible and downloadable by every visitor. The gallery returns the newest 100 files. Each response includes only a boolean ownership marker; private browser-key hashes and storage paths are never exposed. Only the uploader's browser receives the delete control, and the Edge Function independently verifies ownership before deletion. Live verification confirmed cross-browser visibility, byte-exact public download, denied cross-browser deletion, owner deletion, cleanup, and the production UI bundle.
 
 ## Interface refresh
 
