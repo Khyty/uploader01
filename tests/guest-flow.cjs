@@ -194,12 +194,15 @@ let browser, debugPage;
     .getByRole("button", { name: "Download hello.txt", exact: true })
     .click();
   await page.getByRole("alert").waitFor();
-  assert.equal(
-    await page
-      .getByRole("button", { name: "Download hello.txt", exact: true })
-      .isEnabled(),
-    true,
-  );
+  await page
+    .getByRole("button", { name: "Download hello.txt", exact: true })
+    .waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const button = document.querySelector(
+      'button[aria-label="Download hello.txt"]',
+    );
+    return button && !button.hasAttribute("disabled");
+  });
   failTransfer = false;
   const downloadEvent = page.waitForEvent("download");
   await page

@@ -22,6 +22,8 @@ The app uses Supabase Free; bandwidth, abuse controls, and current provider allo
 
 Completed, unexpired uploads are visible and downloadable by every visitor. The gallery returns the newest 100 files. Each response includes only a boolean ownership marker; private browser-key hashes and storage paths are never exposed. Only the uploader's browser receives the delete control, and the Edge Function independently verifies ownership before deletion. Live verification confirmed cross-browser visibility, byte-exact public download, denied cross-browser deletion, owner deletion, cleanup, and the production UI bundle.
 
+Supported image uploads (AVIF, GIF, JPEG, PNG, and WebP) receive lazy-loaded public gallery thumbnails through five-minute signed preview URLs. Other file formats continue to use icons. Live verification confirmed that the preview endpoint returns a working signed URL for an active image without exposing its storage path.
+
 ## Interface refresh
 
 The modern mobile-first interface is live on both domains. New links use `/s/TOKEN`; legacy query links still resolve. Local Chromium checks passed for responsive layout, navigation, keyboard-accessible dialogs, search, and offline fallback. A separate production-build integration test with mocked Supabase HTTP responses passed guest upload/completion, clipboard copying, browser-key persistence, deletion confirmation, new and legacy links, and expired-link rendering. Public HTTP checks confirmed the updated application on both domains and share routes, with no preview mode or Vercel login protection. The Supabase backend and retention settings were unchanged in this release.

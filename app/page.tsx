@@ -78,6 +78,44 @@ const samples: Item[] = [
     status: "demo",
   },
 ];
+
+function isPreviewable(name: string) {
+  return /\.(avif|gif|jpe?g|png|webp)$/i.test(name);
+}
+
+function FilePreview({ item }: { item: Item }) {
+  const [url, setUrl] = useState("");
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!supabase || !item.share_token || !isPreviewable(item.name)) return;
+    supabase.functions
+      .invoke("file-manager", {
+        body: { action: "preview", token: item.share_token },
+      })
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error || data?.error || !data?.url) setFailed(true);
+        else setUrl(data.url);
+      });
+    return () => {
+      active = false;
+    };
+  }, [item.name, item.share_token]);
+
+  if (!isPreviewable(item.name) || failed || !url) return null;
+  return (
+    <img
+      className="file-preview-image"
+      src={url}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export default function Home() {
   const [items, setItems] = useState<Item[]>(configured ? [] : samples),
     [tab, setTab] = useState("overview"),
@@ -677,6 +715,7 @@ export default function Home() {
                     <span
                       className={`file-icon ${item.name.endsWith(".pdf") ? "pdf" : item.name.endsWith(".zip") ? "zip" : "image"}`}
                     >
+                      <FilePreview item={item} />
                       {fileIcon(item.name)}
                     </span>
                     <div>

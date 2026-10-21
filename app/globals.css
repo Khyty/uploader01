@@ -617,6 +617,17 @@ button:active {
   place-items: center;
   border-radius: 10px;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.file-preview-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #f4f7ef;
+  z-index: 1;
 }
 .pdf {
   color: #c48c73;

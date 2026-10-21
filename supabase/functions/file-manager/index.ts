@@ -43,6 +43,14 @@ Deno.serve(async req=>{
    const {data,error}=await admin.storage.from('uploads').createSignedUrl(file.path,60,{download:file.name});if(error)throw error;
    return reply({url:data.signedUrl});
   }
+  if(body.action==='preview'){
+   if(typeof body.token!=='string'||!/^[a-f0-9]{48}$/.test(body.token))return reply({error:'Invalid link'},400);
+   const {data:file}=await admin.from('files').select('name,path').eq('share_token',body.token).eq('status','ready').gt('expires_at',new Date().toISOString()).maybeSingle();
+   if(!file)return reply({error:'This file has expired or was removed.'},404);
+   if(!/\.(avif|gif|jpe?g|png|webp)$/i.test(file.name))return reply({error:'Preview is not available for this file type.'},415);
+   const {data,error}=await admin.storage.from('uploads').createSignedUrl(file.path,300);if(error)throw error;
+   return reply({url:data.signedUrl});
+  }
   if(typeof body.guest_key!=='string'||!/^[a-f0-9]{64}$/.test(body.guest_key))return reply({error:'A private browser key is required.'},401);
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(body.guest_key));
   const ownerKey=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');
