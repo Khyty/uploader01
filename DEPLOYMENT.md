@@ -5,8 +5,8 @@
 - Vercel project: `pannheu-uploader01`
 - Supabase project: `pannheu-uploader01` (`sdsasujntwgidfcmwmgm`), Singapore
 - Supabase project dashboard: https://supabase.com/dashboard/project/sdsasujntwgidfcmwmgm
-- Deployment: `dpl_GWQEPmYBSxjZC92Y5Ms756kn8Jxk`
-- Application source revision: `af0dd16`
+- Deployment: `dpl_6zQ83kbNMjTyrynBzBSbTZVtLQw1`
+- Application source revision: `5c690d4`
 
 Both SQL migrations are applied. The private uploads bucket has a 20 MB per-file limit; the database enforces the 800 MB shared quota. Completed, unexpired uploads appear in a public gallery, while deletion remains restricted to the browser that uploaded each file. Guest management is enabled without registration. The `file-manager` Edge Function is deployed with explicit private browser-capability checks. The hourly `pannheu-hourly-cleanup` Cron job is active; its authorization secret is stored in Supabase Edge Function secrets and Vault. Supabase Auth and email are not required. Vercel deployment protection is disabled for this public application.
 
